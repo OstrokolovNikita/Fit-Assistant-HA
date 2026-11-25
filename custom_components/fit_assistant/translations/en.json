@@ -1,0 +1,37 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Watch profile",
+        "description": "Select read-only entities and explicitly permitted controls. Access is closed until pairing is approved.",
+        "data": {
+          "name": "Watch name",
+          "entities": "Read-only entities",
+          "controls": "Allowed lights and switches"
+        }
+      }
+    },
+    "error": {
+      "invalid_profile": "Use a name up to 40 characters and at most 20 entities."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Watch settings",
+        "description": "Status: {status}. To pair, press Connect on the watch and enter the displayed code.",
+        "data": {
+          "entities": "Read-only entities",
+          "controls": "Allowed lights and switches",
+          "pair_code": "Eight-digit watch code",
+          "revoke": "Revoke watch access"
+        }
+      }
+    },
+    "error": {
+      "invalid_profile": "Select at most 20 supported entities.",
+      "invalid_code": "Invalid or expired code. Get a new code on the watch.",
+      "revoke_first": "Revoke previous access first."
+    }
+  }
+}

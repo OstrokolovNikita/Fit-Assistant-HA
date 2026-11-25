@@ -1,0 +1,17 @@
+{
+  "domain": "fit_assistant",
+  "name": "Fit Assistant",
+  "version": "0.3.0",
+  "config_flow": true,
+  "dependencies": [
+    "http"
+  ],
+  "documentation": "https://github.com/OstrokolovNikita/Fit-Assistant-HA",
+  "issue_tracker": "https://github.com/OstrokolovNikita/Fit-Assistant-HA/issues",
+  "iot_class": "local_polling",
+  "integration_type": "hub",
+  "requirements": [],
+  "codeowners": [
+    "@OstrokolovNikita"
+  ]
+}
