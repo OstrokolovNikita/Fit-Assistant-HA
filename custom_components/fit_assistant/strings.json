@@ -42,7 +42,10 @@
           "group": "Section",
           "theme": "Color",
           "order": "Order",
-          "another": "Edit another card"
+          "another": "Edit another card",
+          "favorite": "Favorite",
+          "icon": "Icon",
+          "precision": "Decimal places (-1 = auto)"
         }
       }
     },
