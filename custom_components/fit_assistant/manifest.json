@@ -1,7 +1,7 @@
 {
   "domain": "fit_assistant",
   "name": "Fit Assistant",
-  "version": "0.3.0",
+  "version": "0.3.7",
   "config_flow": true,
   "dependencies": [
     "http"

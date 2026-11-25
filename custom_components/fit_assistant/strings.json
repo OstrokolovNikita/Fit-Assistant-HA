@@ -24,14 +24,36 @@
           "entities": "Read-only entities",
           "controls": "Allowed lights and switches",
           "pair_code": "Eight-digit watch code",
-          "revoke": "Revoke watch access"
+          "revoke": "Revoke watch access",
+          "edit_cards": "Customize cards"
+        }
+      },
+      "choose_card": {
+        "title": "Choose card",
+        "data": {
+          "entity": "Entity"
+        }
+      },
+      "card": {
+        "title": "Card layout",
+        "description": "Entity: {entity}. Empty label uses HA name. Lower order goes first.",
+        "data": {
+          "label": "Watch label",
+          "group": "Section",
+          "theme": "Color",
+          "order": "Order",
+          "another": "Edit another card"
         }
       }
     },
     "error": {
       "invalid_profile": "Select at most 20 supported entities.",
       "invalid_code": "Invalid or expired code. Get a new code on the watch.",
-      "revoke_first": "Revoke previous access first."
+      "revoke_first": "Revoke previous access first.",
+      "invalid_card": "Label up to 60 characters, section up to 24."
+    },
+    "abort": {
+      "profile_changed": "Profile changed. Reopen settings."
     }
   }
 }

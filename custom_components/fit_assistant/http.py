@@ -6,6 +6,7 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import Context
 from .const import DOMAIN, MAX_ENTITIES, READ_DOMAINS
 from .protocol import matches, action_allowed
+from .layout import decorate
 
 
 def reply(data, status=200):
@@ -39,7 +40,7 @@ class BaseView(HomeAssistantView):
             unit = str(state.attributes.get('unit_of_measurement') or '')[:15] if state else ''
             result.append({'id': entity, 'name': name, 'state': value, 'unit': unit,
                            'control': action_allowed(entity, 'turn_on', controls) and value in ('on','off')})
-        return result
+        return decorate(result, entry.options)
 
 
 class PairView(BaseView):
