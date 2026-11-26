@@ -130,7 +130,7 @@ class FitOptionsFlow(config_entries.OptionsFlow):
                 return self.async_abort(reason='profile_changed')
             else:
                 cards[entity] = {'label':label,'group':group,'theme':theme,'background':background,'order':order,'icon':icon,'precision':precision}
-                if user_input.get('home'):
+                if user_input.get('favorite', user_input.get('home', False)):
                     self._values['home_entity'] = entity
                 elif self._values.get('home_entity') == entity:
                     self._values['home_entity'] = None
@@ -144,7 +144,7 @@ class FitOptionsFlow(config_entries.OptionsFlow):
             vol.Required('theme', default=current.get('theme','auto')): dropdown(themes),
             vol.Required('background', default=current.get('background','auto')): dropdown([{'value':k,'label':n} for k,n in zip(BACKGROUNDS,("Автоматически", "Красный", "Оранжевый", "Жёлтый", "Зелёный", "Синий", "Фиолетовый", "Розовый", "Графит", "Бургунди", "Малиновый", "Лавандовый", "Бирюзовый", "Янтарный", "Голубой", "Индиго", "Мятный"))]),
             vol.Required('order', default=current.get('order',selected(self._values).index(entity)+1)): selector.NumberSelector(selector.NumberSelectorConfig(min=1,max=99,step=1,mode=selector.NumberSelectorMode.BOX)),
-            vol.Optional('home', default=self._values.get('home_entity')==entity): bool,
+            vol.Optional('favorite', default=self._values.get('home_entity')==entity): bool,
             vol.Required('icon', default=current.get('icon','auto')): dropdown([{'value':k,'label':n} for k,n in zip(ICONS,('Автоматически','Температура','Влажность','Лампочка','Люстра','Светодиодная лента','Выключатель','Розетка','Климат','Шторы','Датчик','Движение','Дверь','Батарея'))]),
             vol.Required('precision', default=current.get('precision',-1)): selector.NumberSelector(selector.NumberSelectorConfig(min=-1,max=3,step=1,mode=selector.NumberSelectorMode.BOX)),
             vol.Optional('another', default=False): bool,

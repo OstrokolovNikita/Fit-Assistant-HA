@@ -9,9 +9,9 @@ def room_name(value):
 
 def home_entity(options, ids):
     """Preserve existing pin; migrate legacy favorites once if no pin exists."""
-    if 'home_entity' in options:
-        chosen = options['home_entity']
-        return chosen if chosen in ids else None
+    chosen = options.get('home_entity')
+    if chosen in ids:
+        return chosen
     cards = options.get('cards', {})
     return next((entity for entity in ids if cards.get(entity, {}).get('favorite') is True), None)
 

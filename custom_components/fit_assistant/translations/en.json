@@ -36,7 +36,7 @@
       },
       "card": {
         "title": "Card layout",
-        "description": "Entity: {entity}. Empty name uses HA name; empty room uses HA area. Choosing a favorite replaces the previous home tile.",
+        "description": "Version 0.3.17. Entity: {entity}. Empty name uses HA name; empty room uses HA area. Choosing a favorite replaces the previous home tile.",
         "data": {
           "label": "Watch label",
           "group": "Room (empty = HA area)",
@@ -46,7 +46,7 @@
           "icon": "Icon",
           "precision": "Decimal places (-1 = auto)",
           "background": "Screen gradient background",
-          "home": "Home favorite (one device)"
+          "favorite": "Favorite on home screen (one device)"
         }
       }
     },
