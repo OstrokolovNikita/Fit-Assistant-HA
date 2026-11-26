@@ -8,7 +8,7 @@ from homeassistant.helpers import area_registry, device_registry, entity_registr
 from .const import DOMAIN, MAX_ENTITIES, READ_DOMAINS
 from .protocol import matches, action_allowed
 from .layout import decorate
-from .trend import get_trend, number
+from .trend import get_trends, number
 from .dimming import dimmable, level, service_data
 
 
@@ -87,23 +87,29 @@ class DashboardView(BaseView):
             return reply({'status': 'denied'}, 403)
         items = self.items(entry)
         requested = request.query.get("history", "")
-        item = next((i for i in items if i["id"] == requested), None)
-        trend = None
-        history_status = 'disabled'
-        if item and requested.startswith("sensor.") and number(item["state"]) is not None:
-            hours = entry.options.get("cards", {}).get(requested, {}).get("history_hours", 12)
-            history_status, trend = await get_trend(self.hass, self.hub, requested, hours)
-            # Reauthorize after the asynchronous Recorder query.
+
+        def history_key(item):
+            return (item["id"], item.get("history_hours", 12), item["unit"])
+
+        keys = [history_key(item) for item in items
+                if item["id"].startswith("sensor.") and
+                (requested == "all" or item["id"] == requested) and
+                item.get("history_hours", 12) in (3, 6, 12, 24) and
+                number(item["state"]) is not None]
+        if keys:
+            results = await get_trends(self.hass, self.hub, keys)
+            # Reauthorize and recheck the allowed entities, units and periods.
             entry = self.profile(request)
             if entry is None:
                 return reply({"status": "denied"}, 403)
             items = self.items(entry)
-            item = next((i for i in items if i["id"] == requested), None)
-            current_hours = entry.options.get("cards", {}).get(requested, {}).get("history_hours", 12)
-            if item and hours == current_hours and number(item["state"]) is not None:
-                item["history_status"] = history_status
-                if trend:
-                    item["history"] = trend
+            for item in items:
+                result = results.get(history_key(item))
+                if result and number(item["state"]) is not None:
+                    status, trend = result
+                    item["history_status"] = status
+                    if trend:
+                        item["history"] = trend
         return reply({"status": "ok", "name": entry.title[:40], "items": items,
                       "language": entry.options.get("language", "en"),
                       "keep_seconds": entry.options.get("keep_seconds", 15)})
