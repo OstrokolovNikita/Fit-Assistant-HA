@@ -65,8 +65,8 @@ class PairView(BaseView):
     name = 'api:fit_assistant:pair'
 
     async def post(self, request):
-        # Only open while an administrator has created an unpaired watch profile.
-        if not any(not e.options.get('token_hash') for e in self.entries()):
+        # A pending code grants no access. An admin may approve it for any existing profile.
+        if not self.entries():
             return reply({'status': 'closed'}, 403)
         result = self.hub['pool'].start()
         if result is None:

@@ -19,11 +19,11 @@
     "step": {
       "init": {
         "title": "Watch settings",
-        "description": "Status: {status}. To pair, press Connect on the watch and enter the displayed code.",
+        "description": "Status: {status}. For pairing or re-pairing, tap Connect on the watch and enter the code in this profile. Approval replaces the previous token; devices and cards are retained.",
         "data": {
           "entities": "Read-only entities",
           "controls": "Allowed lights and switches",
-          "pair_code": "Eight-digit watch code",
+          "pair_code": "Watch code (pair or re-pair)",
           "revoke": "Revoke watch access",
           "edit_cards": "Customize cards",
           "language": "Watch language",
@@ -56,7 +56,7 @@
     "error": {
       "invalid_profile": "Select at most 20 supported entities.",
       "invalid_code": "Invalid or expired code. Get a new code on the watch.",
-      "revoke_first": "Revoke previous access first.",
+      "revoke_first": "Enter a code or revoke access, not both.",
       "invalid_card": "Label up to 60 characters, section up to 24."
     },
     "abort": {

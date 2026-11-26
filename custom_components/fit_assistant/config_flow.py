@@ -5,6 +5,7 @@ from homeassistant.helpers import selector
 from .const import DOMAIN, MAX_ENTITIES, READ_DOMAINS, CONTROL_DOMAINS
 from .layout import THEMES, ICONS, BACKGROUNDS, room_name, home_entity
 from .trend import PERIODS
+from .protocol import apply_pairing
 
 
 def fields(options):
@@ -67,9 +68,10 @@ class FitOptionsFlow(config_entries.OptionsFlow):
             revoke = user_input.get('revoke', False)
             if values is None:
                 errors['base'] = 'invalid_profile'
-            elif code and (revoke or old.get('token_hash')):
+            elif code and revoke:
                 errors['base'] = 'revoke_first'
             else:
+                values = {**old, **values}
                 ids = selected(values)
                 values['cards'] = {k:{key: value for key, value in v.items() if key != 'favorite'} for k,v in old.get('cards', {}).items() if k in ids}
                 values['home_entity'] = user_input.get('home_entity', home_entity(old, ids))
@@ -81,16 +83,10 @@ class FitOptionsFlow(config_entries.OptionsFlow):
                 values['language'] = user_input.get('language', old.get('language', 'en'))
                 if values['language'] not in ('en', 'ru'):
                     values['language'] = 'en'
-                token_hash = old.get('token_hash')
-                if revoke:
-                    token_hash = None
-                elif code:
-                    token_hash = self.hass.data[DOMAIN]['pool'].consume(code)
-                    if not token_hash:
-                        errors['base'] = 'invalid_code'
+                pairing_error = apply_pairing(values, self.hass.data[DOMAIN]['pool'], code, revoke)
+                if pairing_error:
+                    errors['base'] = pairing_error
                 if not errors:
-                    if token_hash:
-                        values['token_hash'] = token_hash
                     # Pairing and revocation are committed immediately.
                     if user_input.get('edit_cards') and not code and not revoke and ids:
                         self._values = values
@@ -107,10 +103,9 @@ class FitOptionsFlow(config_entries.OptionsFlow):
         schema[vol.Required('keep_seconds', default=str(old.get('keep_seconds',15)))] = dropdown([{'value':str(n),'label':str(n)} for n in (5,10,15,30)])
         schema[vol.Required('language', default=old.get('language','en'))] = dropdown([{'value':'en','label':'English'}, {'value':'ru','label':'Русский'}])
         schema[vol.Optional('edit_cards', default=False)] = bool
+        schema[vol.Optional('pair_code')] = str
         if old.get('token_hash'):
             schema[vol.Optional('revoke', default=False)] = bool
-        else:
-            schema[vol.Optional('pair_code')] = str
         return self.async_show_form(step_id='init', data_schema=vol.Schema(schema), errors=errors,
                                     description_placeholders={'status': ('Подключено' if old.get('token_hash') else 'Не подключено') if self.hass.config.language == 'ru' else ('Connected' if old.get('token_hash') else 'Not connected')})
 

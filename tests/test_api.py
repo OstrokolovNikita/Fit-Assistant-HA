@@ -13,8 +13,12 @@ for name in ('homeassistant','homeassistant.components','homeassistant.component
     sys.modules[name] = types.ModuleType(name)
 sys.modules['homeassistant.components.http'].HomeAssistantView = object
 sys.modules['homeassistant.core'].Context = object
+helpers = types.ModuleType('homeassistant.helpers')
+for name in ('area_registry','device_registry','entity_registry'):
+    setattr(helpers,name,SimpleNamespace(async_get=lambda hass: SimpleNamespace(async_get=lambda key: None)))
+sys.modules['homeassistant.helpers'] = helpers
 from custom_components.fit_assistant.http import PairView, DashboardView, ActionView
-from custom_components.fit_assistant.protocol import PairingPool, digest, matches
+from custom_components.fit_assistant.protocol import PairingPool, digest, matches, apply_pairing
 
 
 class PairingTests(unittest.TestCase):
@@ -93,9 +97,32 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
     async def test_no_auth_no_data_and_closed_pair(self):
         res=await self.client.get(self.base+'dashboard')
         self.assertEqual(res.status,403)
-        self.first.options['token_hash']=digest('a'*64)
+        self.entries.clear()
         res=await self.client.post(self.base+'pair')
         self.assertEqual(res.status,403)
+
+    async def test_repair_existing_profile(self):
+        old='a'*64
+        self.first.options.update(token_hash=digest(old), cards={'sensor.temp':{'label':'Custom'}}, home_entity='sensor.temp', language='ru', keep_seconds=30)
+        original=dict(self.first.options)
+        data, headers=await self.pair()
+        res=await self.client.get(self.base+'dashboard',headers=headers)
+        self.assertEqual((await res.json())['status'],'pending')
+        self.assertEqual((await self.client.get(self.base+'dashboard',headers={'X-Fit-Token':old})).status,200)
+        self.assertEqual(apply_pairing(self.first.options,self.hub['pool'],'bad',False),'invalid_code')
+        self.assertEqual(self.first.options,original)
+        self.assertEqual(apply_pairing(self.first.options,self.hub['pool'],data['code'],True),'revoke_first')
+        self.assertEqual(self.first.options,original)
+        self.assertIsNone(apply_pairing(self.first.options,self.hub['pool'],data['code'],False))
+        self.assertEqual({k:v for k,v in self.first.options.items() if k!='token_hash'},{k:v for k,v in original.items() if k!='token_hash'})
+        self.assertEqual((await self.client.get(self.base+'dashboard',headers={'X-Fit-Token':old})).status,403)
+        res=await self.client.get(self.base+'dashboard',headers=headers)
+        self.assertEqual(res.status,200)
+        body=await res.json()
+        self.assertEqual(body['language'],'ru')
+        self.assertEqual(body['keep_seconds'],30)
+        self.assertEqual(apply_pairing(self.first.options,self.hub['pool'],data['code'],False),'invalid_code')
+        self.assertEqual((await self.client.get(self.base+'dashboard',headers={'X-Fit-Token':'b'*64})).status,200)
     async def test_bad_request_unavailable_unload(self):
         self.first.options['token_hash']=digest('a'*64)
         headers={'X-Fit-Token':'a'*64}

@@ -56,6 +56,20 @@ class PairingPool:
         return any(matches(token, h) for h, _ in self.pending.values())
 
 
+def apply_pairing(options, pool, code, revoke):
+    """Replace a profile token only after an administrator submits a valid code."""
+    if code and revoke:
+        return 'revoke_first'
+    if code:
+        replacement = pool.consume(code)
+        if not replacement:
+            return 'invalid_code'
+        options['token_hash'] = replacement
+    elif revoke:
+        options.pop('token_hash', None)
+    return None
+
+
 def action_allowed(entity, action, controls):
     return (isinstance(entity, str) and entity in controls
             and entity.partition('.')[0] in ('light', 'switch')
