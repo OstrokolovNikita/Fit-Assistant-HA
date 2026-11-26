@@ -72,7 +72,12 @@ class FitOptionsFlow(config_entries.OptionsFlow):
             else:
                 ids = selected(values)
                 values['cards'] = {k:{key: value for key, value in v.items() if key != 'favorite'} for k,v in old.get('cards', {}).items() if k in ids}
-                values['home_entity'] = home_entity(old, ids)
+                values['home_entity'] = user_input.get('home_entity', home_entity(old, ids))
+                if values['home_entity'] not in ids:
+                    values['home_entity'] = None
+                values['keep_seconds'] = int(user_input.get('keep_seconds', old.get('keep_seconds', 15)))
+                if values['keep_seconds'] not in (5, 10, 15, 30):
+                    values['keep_seconds'] = 15
                 values['language'] = user_input.get('language', old.get('language', 'en'))
                 if values['language'] not in ('en', 'ru'):
                     values['language'] = 'en'
@@ -93,6 +98,13 @@ class FitOptionsFlow(config_entries.OptionsFlow):
                         return await self.async_step_choose_card()
                     return self.async_create_entry(title='', data=values)
         schema = fields(old)
+        ids = selected(old)
+        choices = [{'value':'', 'label':'None' if self.hass.config.language != 'ru' else 'Нет'}]
+        for entity in ids:
+            state = self.hass.states.get(entity)
+            choices.append({'value':entity,'label':state.name if state else entity})
+        schema[vol.Required('home_entity', default=home_entity(old, ids) or '')] = dropdown(choices)
+        schema[vol.Required('keep_seconds', default=str(old.get('keep_seconds',15)))] = dropdown([{'value':str(n),'label':str(n)} for n in (5,10,15,30)])
         schema[vol.Required('language', default=old.get('language','en'))] = dropdown([{'value':'en','label':'English'}, {'value':'ru','label':'Русский'}])
         schema[vol.Optional('edit_cards', default=False)] = bool
         if old.get('token_hash'):
@@ -136,10 +148,6 @@ class FitOptionsFlow(config_entries.OptionsFlow):
                 return self.async_abort(reason='profile_changed')
             else:
                 cards[entity] = {'label':label,'group':group,'theme':theme,'background':background,'order':order,'icon':icon,'precision':precision,'history_hours':history_hours}
-                if user_input.get('favorite', user_input.get('home', False)):
-                    self._values['home_entity'] = entity
-                elif self._values.get('home_entity') == entity:
-                    self._values['home_entity'] = None
                 if user_input.get('another'):
                     return await self.async_step_choose_card()
                 return self.async_create_entry(title='', data=self._values)
@@ -150,7 +158,6 @@ class FitOptionsFlow(config_entries.OptionsFlow):
             vol.Required('theme', default=current.get('theme','auto')): dropdown(themes),
             vol.Required('background', default=current.get('background','auto')): dropdown([{'value':k,'label':n} for k,n in zip(BACKGROUNDS,(("Автоматически", "Красный", "Оранжевый", "Жёлтый", "Зелёный", "Синий", "Фиолетовый", "Розовый", "Графит", "Бургунди", "Малиновый", "Лавандовый", "Бирюзовый", "Янтарный", "Голубой", "Индиго", "Мятный") if self.hass.config.language == 'ru' else ("Automatic", "Red", "Orange", "Yellow", "Green", "Blue", "Violet", "Pink", "Graphite", "Burgundy", "Raspberry", "Lavender", "Teal", "Amber", "Cyan", "Indigo", "Mint")))]),
             vol.Required('order', default=current.get('order',selected(self._values).index(entity)+1)): selector.NumberSelector(selector.NumberSelectorConfig(min=1,max=99,step=1,mode=selector.NumberSelectorMode.BOX)),
-            vol.Optional('favorite', default=self._values.get('home_entity')==entity): bool,
             vol.Required('icon', default=current.get('icon','auto')): dropdown([{'value':k,'label':n} for k,n in zip(ICONS,(('Автоматически','Температура','Влажность','Лампочка','Люстра','Светодиодная лента','Выключатель','Розетка','Климат','Шторы','Датчик','Движение','Дверь','Батарея') if self.hass.config.language == 'ru' else ('Automatic','Temperature','Humidity','Bulb','Chandelier','LED strip','Switch','Socket','Climate','Cover','Sensor','Motion','Door','Battery')))]),
             vol.Required('precision', default=current.get('precision',-1)): selector.NumberSelector(selector.NumberSelectorConfig(min=-1,max=3,step=1,mode=selector.NumberSelectorMode.BOX)),
             vol.Required('history_hours', default=str(current.get('history_hours',12))): dropdown([{'value':str(h),'label':str(h) if h else ('Выключено' if self.hass.config.language == 'ru' else 'Off')} for h in PERIODS]),

@@ -26,7 +26,9 @@
           "pair_code": "Eight-digit watch code",
           "revoke": "Revoke watch access",
           "edit_cards": "Customize cards",
-          "language": "Watch language"
+          "language": "Watch language",
+          "home_entity": "Home favorite",
+          "keep_seconds": "Screen hold, seconds"
         }
       },
       "choose_card": {
@@ -37,7 +39,7 @@
       },
       "card": {
         "title": "Card layout",
-        "description": "Version 0.3.20. Entity: {entity}. Empty name uses HA name; empty room uses HA area. Choosing a favorite replaces the previous home tile.",
+        "description": "Version 0.3.21. Entity: {entity}. Empty name uses HA name; empty room uses HA area. Set the favorite in main settings.",
         "data": {
           "label": "Watch label",
           "group": "Room (empty = HA area)",
@@ -47,7 +49,6 @@
           "icon": "Icon",
           "precision": "Decimal places (-1 = auto)",
           "background": "Screen gradient background",
-          "favorite": "Favorite on home screen (one device)",
           "history_hours": "Sensor history, hours (0 = off)"
         }
       }

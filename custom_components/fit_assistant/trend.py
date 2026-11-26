@@ -4,6 +4,9 @@ from functools import partial
 from math import isfinite
 from time import monotonic
 import asyncio
+import logging
+
+_LOGGER = logging.getLogger(__name__)
 
 PERIODS = (0, 3, 6, 12, 24)
 POINTS = 36
@@ -21,7 +24,16 @@ def summarize(rows, start, end, hours):
     """Sample the last known recorded state at equal time intervals.
     Do not bridge explicit unavailable states or invent a missing initial state.
     """
-    if not rows or rows[0][0] > start or any(number(v) is None for _, v in rows):
+    rows = sorted((t, v) for t, v in rows if t <= end)
+    # Use only the latest uninterrupted numeric segment. Never bridge gaps.
+    for i in range(len(rows) - 1, -1, -1):
+        if number(rows[i][1]) is None:
+            rows = rows[i+1:]
+            break
+    if not rows:
+        return None
+    start = max(start, rows[0][0])
+    if end <= start:
         return None
     vals = []
     at = 0
@@ -35,7 +47,8 @@ def summarize(rows, start, end, hours):
     if not isfinite(hi - lo):
         return None
     points = [50 if hi == lo else round(8 + 84 * ((v - lo) / (hi - lo))) for v in vals]
-    return {"hours": hours, "min": round(lo, 2), "max": round(hi, 2), "points": points}
+    return {"hours": hours, "minutes": max(1, round((end-start)/60)),
+            "min": round(lo, 2), "max": round(hi, 2), "points": points}
 
 
 def load_history(hass, entity, hours):
@@ -53,35 +66,40 @@ def load_history(hass, entity, hours):
 async def get_trend(hass, hub, entity, hours):
     """Cache only derived readings, one Recorder job at a time per hub."""
     if hours not in PERIODS or not hours:
-        return None
+        return ("disabled", None)
     cache = hub.setdefault("trend_cache", {})
     key = (entity, hours)
     now = monotonic()
     cached = cache.get(key)
-    if cached and now - cached[0] < 300:
+    if cached and now - cached[0] < (300 if cached[1][0] == "ok" else 15):
         return cached[1]
     if hub.get("trend_busy"):
-        return None
+        return ("pending", None)
     hub["trend_busy"] = True
     # Negative cache prevents hammering missing history.
     if len(cache) >= 100:
         cache.clear()
-    cache[key] = (now, None)
+    cache[key] = (now, ("pending", None))
 
     async def run():
         try:
-            from homeassistant.components.recorder import get_instance
+            try:
+                from homeassistant.helpers.recorder import get_instance
+            except ImportError:
+                from homeassistant.components.recorder import get_instance
             value = await get_instance(hass).async_add_executor_job(
                 partial(load_history, hass, entity, hours))
-            cache[key] = (monotonic(), value)
-            return value
+            result = ("ok", value) if value else ("empty", None)
         except Exception:
-            return None
+            _LOGGER.exception("Failed to read Fit Assistant sensor history")
+            result = ("error", None)
         finally:
             hub["trend_busy"] = False
+        cache[key] = (monotonic(), result)
+        return result
 
     task = hass.async_create_task(run())
     try:
         return await asyncio.wait_for(asyncio.shield(task), timeout=2)
     except TimeoutError:
-        return None
+        return ("pending", None)
