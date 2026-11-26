@@ -36,7 +36,7 @@
       },
       "card": {
         "title": "Card layout",
-        "description": "Entity: {entity}. Empty name uses HA name; empty room uses HA area. Favorites are independent.",
+        "description": "Entity: {entity}. Empty name uses HA name; empty room uses HA area. Favorites are independent. Pinning replaces the previous home tile.",
         "data": {
           "label": "Watch label",
           "group": "Room (empty = HA area)",
@@ -46,7 +46,8 @@
           "favorite": "Favorite",
           "icon": "Icon",
           "precision": "Decimal places (-1 = auto)",
-          "background": "Screen gradient background"
+          "background": "Screen gradient background",
+          "home": "Pin to home (one device only)"
         }
       }
     },

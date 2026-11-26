@@ -71,6 +71,8 @@ class FitOptionsFlow(config_entries.OptionsFlow):
             else:
                 ids = selected(values)
                 values['cards'] = {k:v for k,v in old.get('cards', {}).items() if k in ids}
+                if old.get('home_entity') in ids:
+                    values['home_entity'] = old['home_entity']
                 token_hash = old.get('token_hash')
                 if revoke:
                     token_hash = None
@@ -130,17 +132,23 @@ class FitOptionsFlow(config_entries.OptionsFlow):
                 return self.async_abort(reason='profile_changed')
             else:
                 cards[entity] = {'label':label,'group':group,'theme':theme,'background':background,'order':order,'favorite':favorite,'icon':icon,'precision':precision}
+                if user_input.get('home'):
+                    self._values['home_entity'] = entity
+                    cards[entity]['favorite'] = True
+                elif self._values.get('home_entity') == entity:
+                    self._values.pop('home_entity', None)
                 if user_input.get('another'):
                     return await self.async_step_choose_card()
                 return self.async_create_entry(title='', data=self._values)
-        themes = [{'value':k,'label':n} for k,n in zip(THEMES,('Автоматически','Синий','Бирюзовый','Янтарный','Фиолетовый','Красный'))]
+        themes = [{'value':k,'label':n} for k,n in zip(THEMES,("Автоматически", "Красный", "Оранжевый", "Жёлтый", "Зелёный", "Синий", "Фиолетовый", "Розовый", "Графит", "Бургунди", "Малиновый", "Лавандовый", "Бирюзовый", "Янтарный", "Голубой", "Индиго", "Мятный"))]
         return self.async_show_form(step_id='card', data_schema=vol.Schema({
             vol.Optional('label', default=current.get('label','')): str,
             vol.Optional('group', default=room_name(current.get('group'))): str,
             vol.Required('theme', default=current.get('theme','auto')): dropdown(themes),
-            vol.Required('background', default=current.get('background','auto')): dropdown([{'value':k,'label':n} for k,n in zip(BACKGROUNDS,('Автоматически','Графит','Синий','Бирюзовый','Янтарный','Фиолетовый','Красный'))]),
+            vol.Required('background', default=current.get('background','auto')): dropdown([{'value':k,'label':n} for k,n in zip(BACKGROUNDS,("Автоматически", "Красный", "Оранжевый", "Жёлтый", "Зелёный", "Синий", "Фиолетовый", "Розовый", "Графит", "Бургунди", "Малиновый", "Лавандовый", "Бирюзовый", "Янтарный", "Голубой", "Индиго", "Мятный"))]),
             vol.Required('order', default=current.get('order',selected(self._values).index(entity)+1)): selector.NumberSelector(selector.NumberSelectorConfig(min=1,max=99,step=1,mode=selector.NumberSelectorMode.BOX)),
             vol.Optional('favorite', default=current.get('favorite',False)): bool,
+            vol.Optional('home', default=self._values.get('home_entity')==entity): bool,
             vol.Required('icon', default=current.get('icon','auto')): dropdown([{'value':k,'label':n} for k,n in zip(ICONS,('Автоматически','Температура','Влажность','Лампочка','Люстра','Светодиодная лента','Выключатель','Розетка','Климат','Шторы','Датчик','Движение','Дверь','Батарея'))]),
             vol.Required('precision', default=current.get('precision',-1)): selector.NumberSelector(selector.NumberSelectorConfig(min=-1,max=3,step=1,mode=selector.NumberSelectorMode.BOX)),
             vol.Optional('another', default=False): bool,

@@ -1,6 +1,6 @@
 """Watch presentation only; permissions are enforced separately."""
-THEMES = ('auto', 'blue', 'teal', 'amber', 'violet', 'red')
-BACKGROUNDS = ('auto', 'graphite', 'blue', 'teal', 'amber', 'violet', 'red')
+THEMES = ("auto", "red", "orange", "yellow", "green", "blue", "violet", "pink", "graphite", "burgundy", "raspberry", "lavender", "teal", "amber", "cyan", "indigo", "mint")
+BACKGROUNDS = THEMES
 ICONS = ('auto', 'temp', 'humidity', 'light', 'chandelier', 'strip', 'power', 'socket', 'climate', 'cover', 'sensor', 'motion', 'door', 'battery')
 
 def room_name(value):
@@ -18,7 +18,8 @@ def decorate(items, options):
         item['group'] = room_name(cfg.get('group')) or room_name(area) or 'Без комнаты'
         item['theme'] = cfg.get('theme') if cfg.get('theme') in THEMES else 'auto'
         item['background'] = cfg.get('background') if cfg.get('background') in BACKGROUNDS else 'auto'
-        item['favorite'] = cfg.get('favorite') is True
+        item['home'] = item['id'] == options.get('home_entity')
+        item['favorite'] = cfg.get('favorite') is True or item['home']
         item['icon'] = cfg.get('icon') if cfg.get('icon') in ICONS else 'auto'
         precision = cfg.get('precision', -1)
         if isinstance(precision, int) and 0 <= precision <= 3:
