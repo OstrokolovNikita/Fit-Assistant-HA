@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 from functools import partial
 from math import isfinite
 from time import monotonic
+from zoneinfo import ZoneInfo
 import asyncio
 import logging
 
@@ -35,6 +36,9 @@ def summarize(rows, start, end, hours):
     start = max(start, rows[0][0])
     if end <= start:
         return None
+    # Keep at most the last state at/before the requested start.
+    while len(rows) > 1 and rows[1][0] <= start:
+        rows.pop(0)
     vals = []
     at = 0
     for i in range(POINTS):
@@ -48,6 +52,7 @@ def summarize(rows, start, end, hours):
         return None
     points = [50 if hi == lo else round(8 + 84 * ((v - lo) / (hi - lo))) for v in vals]
     return {"hours": hours, "minutes": max(1, round((end-start)/60)),
+            "start": int(start), "end": int(end),
             "min": round(lo, 2), "max": round(hi, 2), "points": points}
 
 
@@ -60,7 +65,15 @@ def load_history(hass, entity, hours):
         include_start_time_state=True, no_attributes=True,
     )
     rows = [(s.last_updated.timestamp(), s.state) for s in data.get(entity, [])]
-    return summarize(rows, start.timestamp(), end.timestamp(), hours)
+    result = summarize(rows, start.timestamp(), end.timestamp(), hours)
+    if result:
+        zone = ZoneInfo(hass.config.time_zone)
+        first = datetime.fromtimestamp(result["start"], zone)
+        last = datetime.fromtimestamp(result["end"], zone)
+        result["interval"] = f"{first:%H:%M} – {last:%H:%M}"
+        if result["minutes"] >= 1439:
+            result["interval"] += " (24h)"
+    return result
 
 
 async def get_trend(hass, hub, entity, hours):

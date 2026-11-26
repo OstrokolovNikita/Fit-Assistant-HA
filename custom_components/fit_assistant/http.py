@@ -9,6 +9,7 @@ from .const import DOMAIN, MAX_ENTITIES, READ_DOMAINS
 from .protocol import matches, action_allowed
 from .layout import decorate
 from .trend import get_trend, number
+from .dimming import dimmable, level, service_data
 
 
 def reply(data, status=200):
@@ -49,9 +50,13 @@ class BaseView(HomeAssistantView):
                 device = dr.async_get(reg.device_id)
                 area_id = device.area_id if device else None
             area = ar.async_get_area(area_id) if area_id else None
-            result.append({'id': entity, 'name': name, 'state': value, 'unit': unit,
-                           '_area': area.name if area else '',
-                           'control': action_allowed(entity, 'turn_on', controls) and value in ('on','off')})
+            item = {'id': entity, 'name': name, 'state': value, 'unit': unit,
+                    '_area': area.name if area else '',
+                    'control': action_allowed(entity, 'turn_on', controls) and value in ('on','off')}
+            if item['control'] and state and dimmable(entity, state.attributes):
+                item['dimmable'] = True
+                item['brightness'] = level(state.attributes)
+            result.append(item)
         return decorate(result, entry.options)
 
 
@@ -136,12 +141,15 @@ class ActionView(BaseView):
         state = self.hass.states.get(entity)
         if state is None or state.state not in ('on', 'off'):
             return reply({'status': 'unavailable'}, 409)
+        data = service_data(entity, action, state.attributes, body)
+        if data is None:
+            return reply({'status': 'bad_request'}, 400)
         if entry.entry_id in self.hub['busy']:
             return reply({'status': 'busy'}, 409)
         self.hub['busy'].add(entry.entry_id)
         try:
             await self.hass.services.async_call(entity.split('.')[0], action,
-                {'entity_id': entity}, blocking=True, context=Context())
+                data, blocking=True, context=Context())
         except Exception:
             return reply({'status': 'service_failed'}, 502)
         finally:
