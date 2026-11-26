@@ -3,7 +3,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers import selector
 from .const import DOMAIN, MAX_ENTITIES, READ_DOMAINS, CONTROL_DOMAINS
-from .layout import THEMES, ICONS, BACKGROUNDS, room_name
+from .layout import THEMES, ICONS, BACKGROUNDS, room_name, home_entity
 
 
 def fields(options):
@@ -70,9 +70,8 @@ class FitOptionsFlow(config_entries.OptionsFlow):
                 errors['base'] = 'revoke_first'
             else:
                 ids = selected(values)
-                values['cards'] = {k:v for k,v in old.get('cards', {}).items() if k in ids}
-                if old.get('home_entity') in ids:
-                    values['home_entity'] = old['home_entity']
+                values['cards'] = {k:{key: value for key, value in v.items() if key != 'favorite'} for k,v in old.get('cards', {}).items() if k in ids}
+                values['home_entity'] = home_entity(old, ids)
                 token_hash = old.get('token_hash')
                 if revoke:
                     token_hash = None
@@ -125,18 +124,16 @@ class FitOptionsFlow(config_entries.OptionsFlow):
             order = int(user_input.get('order', 1))
             icon = user_input.get('icon', 'auto')
             precision = int(user_input.get('precision', -1))
-            favorite = bool(user_input.get('favorite', False))
             if len(label)>60 or len(group)>24 or theme not in THEMES or background not in BACKGROUNDS or icon not in ICONS or not -1<=precision<=3 or not 1<=order<=99:
                 errors['base'] = 'invalid_card'
             elif dict(self.config_entry.options) != self._original:
                 return self.async_abort(reason='profile_changed')
             else:
-                cards[entity] = {'label':label,'group':group,'theme':theme,'background':background,'order':order,'favorite':favorite,'icon':icon,'precision':precision}
+                cards[entity] = {'label':label,'group':group,'theme':theme,'background':background,'order':order,'icon':icon,'precision':precision}
                 if user_input.get('home'):
                     self._values['home_entity'] = entity
-                    cards[entity]['favorite'] = True
                 elif self._values.get('home_entity') == entity:
-                    self._values.pop('home_entity', None)
+                    self._values['home_entity'] = None
                 if user_input.get('another'):
                     return await self.async_step_choose_card()
                 return self.async_create_entry(title='', data=self._values)
@@ -147,7 +144,6 @@ class FitOptionsFlow(config_entries.OptionsFlow):
             vol.Required('theme', default=current.get('theme','auto')): dropdown(themes),
             vol.Required('background', default=current.get('background','auto')): dropdown([{'value':k,'label':n} for k,n in zip(BACKGROUNDS,("Автоматически", "Красный", "Оранжевый", "Жёлтый", "Зелёный", "Синий", "Фиолетовый", "Розовый", "Графит", "Бургунди", "Малиновый", "Лавандовый", "Бирюзовый", "Янтарный", "Голубой", "Индиго", "Мятный"))]),
             vol.Required('order', default=current.get('order',selected(self._values).index(entity)+1)): selector.NumberSelector(selector.NumberSelectorConfig(min=1,max=99,step=1,mode=selector.NumberSelectorMode.BOX)),
-            vol.Optional('favorite', default=current.get('favorite',False)): bool,
             vol.Optional('home', default=self._values.get('home_entity')==entity): bool,
             vol.Required('icon', default=current.get('icon','auto')): dropdown([{'value':k,'label':n} for k,n in zip(ICONS,('Автоматически','Температура','Влажность','Лампочка','Люстра','Светодиодная лента','Выключатель','Розетка','Климат','Шторы','Датчик','Движение','Дверь','Батарея'))]),
             vol.Required('precision', default=current.get('precision',-1)): selector.NumberSelector(selector.NumberSelectorConfig(min=-1,max=3,step=1,mode=selector.NumberSelectorMode.BOX)),

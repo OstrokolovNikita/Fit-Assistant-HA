@@ -7,7 +7,17 @@ def room_name(value):
     value = str(value or '').strip()
     return '' if value.casefold() in ('избранное', 'favorites') else value
 
+def home_entity(options, ids):
+    """Preserve existing pin; migrate legacy favorites once if no pin exists."""
+    if 'home_entity' in options:
+        chosen = options['home_entity']
+        return chosen if chosen in ids else None
+    cards = options.get('cards', {})
+    return next((entity for entity in ids if cards.get(entity, {}).get('favorite') is True), None)
+
+
 def decorate(items, options):
+    pinned = home_entity(options, [item['id'] for item in items])
     cards = options.get('cards', {})
     result = []
     for index, original in enumerate(items):
@@ -18,8 +28,8 @@ def decorate(items, options):
         item['group'] = room_name(cfg.get('group')) or room_name(area) or 'Без комнаты'
         item['theme'] = cfg.get('theme') if cfg.get('theme') in THEMES else 'auto'
         item['background'] = cfg.get('background') if cfg.get('background') in BACKGROUNDS else 'auto'
-        item['home'] = item['id'] == options.get('home_entity')
-        item['favorite'] = cfg.get('favorite') is True or item['home']
+        item['home'] = item['id'] == pinned
+        item['favorite'] = item['home']
         item['icon'] = cfg.get('icon') if cfg.get('icon') in ICONS else 'auto'
         precision = cfg.get('precision', -1)
         if isinstance(precision, int) and 0 <= precision <= 3:
