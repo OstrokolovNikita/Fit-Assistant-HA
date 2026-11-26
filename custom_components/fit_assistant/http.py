@@ -10,6 +10,7 @@ from .protocol import matches, action_allowed
 from .layout import decorate
 from .trend import get_trends, number
 from .dimming import dimmable, level, service_data
+from . import cover_control
 
 
 def reply(data, status=200):
@@ -56,6 +57,8 @@ class BaseView(HomeAssistantView):
             if item['control'] and state and dimmable(entity, state.attributes):
                 item['dimmable'] = True
                 item['brightness'] = level(state.attributes)
+            if entity.startswith("cover.") and entity in controls and state and value in cover_control.STATES:
+                item.update(cover_control.fields(state.attributes))
             result.append(item)
         return decorate(result, entry.options)
 
@@ -145,9 +148,14 @@ class ActionView(BaseView):
         if not action_allowed(entity, action, entry.options.get('controls', [])):
             return reply({'status': 'denied'}, 403)
         state = self.hass.states.get(entity)
-        if state is None or state.state not in ('on', 'off'):
+        is_cover = entity.startswith("cover.")
+        allowed_states = cover_control.STATES if is_cover else ("on", "off")
+        if state is None or state.state not in allowed_states:
             return reply({'status': 'unavailable'}, 409)
-        data = service_data(entity, action, state.attributes, body)
+        if is_cover:
+            data = cover_control.service_data(entity, action, state.attributes, body)
+        else:
+            data = service_data(entity, action, state.attributes, body) if set(body) <= {"entity", "action", "brightness_pct"} else None
         if data is None:
             return reply({'status': 'bad_request'}, 400)
         if entry.entry_id in self.hub['busy']:

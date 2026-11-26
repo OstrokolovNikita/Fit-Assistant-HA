@@ -71,6 +71,8 @@ def apply_pairing(options, pool, code, revoke):
 
 
 def action_allowed(entity, action, controls):
-    return (isinstance(entity, str) and entity in controls
-            and entity.partition('.')[0] in ('light', 'switch')
-            and action in ('turn_on', 'turn_off'))
+    if not isinstance(entity, str) or entity not in controls or not isinstance(action, str):
+        return False
+    domain = entity.partition('.')[0]
+    return ((domain in ('light', 'switch') and action in ('turn_on', 'turn_off'))
+            or (domain == 'cover' and action in ('open_cover', 'close_cover', 'stop_cover', 'set_cover_position')))

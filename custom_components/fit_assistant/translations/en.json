@@ -7,7 +7,7 @@
         "data": {
           "name": "Watch name",
           "entities": "Read-only entities",
-          "controls": "Allowed lights and switches"
+          "controls": "Allowed lights, switches and covers"
         }
       }
     },
@@ -22,7 +22,7 @@
         "description": "Status: {status}. For pairing or re-pairing, tap Connect on the watch and enter the code in this profile. Approval replaces the previous token; devices and cards are retained.",
         "data": {
           "entities": "Read-only entities",
-          "controls": "Allowed lights and switches",
+          "controls": "Allowed lights, switches and covers",
           "pair_code": "Watch code (pair or re-pair)",
           "revoke": "Revoke watch access",
           "edit_cards": "Customize cards",
