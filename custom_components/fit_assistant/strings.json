@@ -40,12 +40,13 @@
         "data": {
           "label": "Watch label",
           "group": "Room (empty = HA area)",
-          "theme": "Color",
+          "theme": "Card color and accent",
           "order": "Order",
           "another": "Edit another card",
           "favorite": "Favorite",
           "icon": "Icon",
-          "precision": "Decimal places (-1 = auto)"
+          "precision": "Decimal places (-1 = auto)",
+          "background": "Screen gradient background"
         }
       }
     },

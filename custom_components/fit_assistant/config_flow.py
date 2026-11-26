@@ -3,7 +3,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers import selector
 from .const import DOMAIN, MAX_ENTITIES, READ_DOMAINS, CONTROL_DOMAINS
-from .layout import THEMES, ICONS, room_name
+from .layout import THEMES, ICONS, BACKGROUNDS, room_name
 
 
 def fields(options):
@@ -119,16 +119,17 @@ class FitOptionsFlow(config_entries.OptionsFlow):
             label = user_input.get('label', '').strip()
             group = room_name(user_input.get('group', ''))
             theme = user_input.get('theme', 'auto')
+            background = user_input.get('background', 'auto')
             order = int(user_input.get('order', 1))
             icon = user_input.get('icon', 'auto')
             precision = int(user_input.get('precision', -1))
             favorite = bool(user_input.get('favorite', False))
-            if len(label)>60 or len(group)>24 or theme not in THEMES or icon not in ICONS or not -1<=precision<=3 or not 1<=order<=99:
+            if len(label)>60 or len(group)>24 or theme not in THEMES or background not in BACKGROUNDS or icon not in ICONS or not -1<=precision<=3 or not 1<=order<=99:
                 errors['base'] = 'invalid_card'
             elif dict(self.config_entry.options) != self._original:
                 return self.async_abort(reason='profile_changed')
             else:
-                cards[entity] = {'label':label,'group':group,'theme':theme,'order':order,'favorite':favorite,'icon':icon,'precision':precision}
+                cards[entity] = {'label':label,'group':group,'theme':theme,'background':background,'order':order,'favorite':favorite,'icon':icon,'precision':precision}
                 if user_input.get('another'):
                     return await self.async_step_choose_card()
                 return self.async_create_entry(title='', data=self._values)
@@ -137,6 +138,7 @@ class FitOptionsFlow(config_entries.OptionsFlow):
             vol.Optional('label', default=current.get('label','')): str,
             vol.Optional('group', default=room_name(current.get('group'))): str,
             vol.Required('theme', default=current.get('theme','auto')): dropdown(themes),
+            vol.Required('background', default=current.get('background','auto')): dropdown([{'value':k,'label':n} for k,n in zip(BACKGROUNDS,('Автоматически','Графит','Синий','Бирюзовый','Янтарный','Фиолетовый','Красный'))]),
             vol.Required('order', default=current.get('order',selected(self._values).index(entity)+1)): selector.NumberSelector(selector.NumberSelectorConfig(min=1,max=99,step=1,mode=selector.NumberSelectorMode.BOX)),
             vol.Optional('favorite', default=current.get('favorite',False)): bool,
             vol.Required('icon', default=current.get('icon','auto')): dropdown([{'value':k,'label':n} for k,n in zip(ICONS,('Автоматически','Температура','Влажность','Лампочка','Люстра','Светодиодная лента','Выключатель','Розетка','Климат','Шторы','Датчик','Движение','Дверь','Батарея'))]),
