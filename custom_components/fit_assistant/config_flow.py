@@ -4,6 +4,7 @@ from homeassistant import config_entries
 from homeassistant.helpers import selector
 from .const import DOMAIN, MAX_ENTITIES, READ_DOMAINS, CONTROL_DOMAINS
 from .layout import THEMES, ICONS, BACKGROUNDS, room_name, home_entity
+from .trend import PERIODS
 
 
 def fields(options):
@@ -72,6 +73,9 @@ class FitOptionsFlow(config_entries.OptionsFlow):
                 ids = selected(values)
                 values['cards'] = {k:{key: value for key, value in v.items() if key != 'favorite'} for k,v in old.get('cards', {}).items() if k in ids}
                 values['home_entity'] = home_entity(old, ids)
+                values['language'] = user_input.get('language', old.get('language', 'en'))
+                if values['language'] not in ('en', 'ru'):
+                    values['language'] = 'en'
                 token_hash = old.get('token_hash')
                 if revoke:
                     token_hash = None
@@ -89,13 +93,14 @@ class FitOptionsFlow(config_entries.OptionsFlow):
                         return await self.async_step_choose_card()
                     return self.async_create_entry(title='', data=values)
         schema = fields(old)
+        schema[vol.Required('language', default=old.get('language','en'))] = dropdown([{'value':'en','label':'English'}, {'value':'ru','label':'Русский'}])
         schema[vol.Optional('edit_cards', default=False)] = bool
         if old.get('token_hash'):
             schema[vol.Optional('revoke', default=False)] = bool
         else:
             schema[vol.Optional('pair_code')] = str
         return self.async_show_form(step_id='init', data_schema=vol.Schema(schema), errors=errors,
-                                    description_placeholders={'status': 'Подключено' if old.get('token_hash') else 'Не подключено'})
+                                    description_placeholders={'status': ('Подключено' if old.get('token_hash') else 'Не подключено') if self.hass.config.language == 'ru' else ('Connected' if old.get('token_hash') else 'Not connected')})
 
 
     async def async_step_choose_card(self, user_input=None):
@@ -124,12 +129,13 @@ class FitOptionsFlow(config_entries.OptionsFlow):
             order = int(user_input.get('order', 1))
             icon = user_input.get('icon', 'auto')
             precision = int(user_input.get('precision', -1))
-            if len(label)>60 or len(group)>24 or theme not in THEMES or background not in BACKGROUNDS or icon not in ICONS or not -1<=precision<=3 or not 1<=order<=99:
+            history_hours = int(user_input.get('history_hours', 12))
+            if len(label)>60 or len(group)>24 or theme not in THEMES or background not in BACKGROUNDS or icon not in ICONS or not -1<=precision<=3 or not 1<=order<=99 or history_hours not in PERIODS:
                 errors['base'] = 'invalid_card'
             elif dict(self.config_entry.options) != self._original:
                 return self.async_abort(reason='profile_changed')
             else:
-                cards[entity] = {'label':label,'group':group,'theme':theme,'background':background,'order':order,'icon':icon,'precision':precision}
+                cards[entity] = {'label':label,'group':group,'theme':theme,'background':background,'order':order,'icon':icon,'precision':precision,'history_hours':history_hours}
                 if user_input.get('favorite', user_input.get('home', False)):
                     self._values['home_entity'] = entity
                 elif self._values.get('home_entity') == entity:
@@ -137,15 +143,16 @@ class FitOptionsFlow(config_entries.OptionsFlow):
                 if user_input.get('another'):
                     return await self.async_step_choose_card()
                 return self.async_create_entry(title='', data=self._values)
-        themes = [{'value':k,'label':n} for k,n in zip(THEMES,("Автоматически", "Красный", "Оранжевый", "Жёлтый", "Зелёный", "Синий", "Фиолетовый", "Розовый", "Графит", "Бургунди", "Малиновый", "Лавандовый", "Бирюзовый", "Янтарный", "Голубой", "Индиго", "Мятный"))]
+        themes = [{'value':k,'label':n} for k,n in zip(THEMES,(("Автоматически", "Красный", "Оранжевый", "Жёлтый", "Зелёный", "Синий", "Фиолетовый", "Розовый", "Графит", "Бургунди", "Малиновый", "Лавандовый", "Бирюзовый", "Янтарный", "Голубой", "Индиго", "Мятный") if self.hass.config.language == 'ru' else ("Automatic", "Red", "Orange", "Yellow", "Green", "Blue", "Violet", "Pink", "Graphite", "Burgundy", "Raspberry", "Lavender", "Teal", "Amber", "Cyan", "Indigo", "Mint")))]
         return self.async_show_form(step_id='card', data_schema=vol.Schema({
             vol.Optional('label', default=current.get('label','')): str,
             vol.Optional('group', default=room_name(current.get('group'))): str,
             vol.Required('theme', default=current.get('theme','auto')): dropdown(themes),
-            vol.Required('background', default=current.get('background','auto')): dropdown([{'value':k,'label':n} for k,n in zip(BACKGROUNDS,("Автоматически", "Красный", "Оранжевый", "Жёлтый", "Зелёный", "Синий", "Фиолетовый", "Розовый", "Графит", "Бургунди", "Малиновый", "Лавандовый", "Бирюзовый", "Янтарный", "Голубой", "Индиго", "Мятный"))]),
+            vol.Required('background', default=current.get('background','auto')): dropdown([{'value':k,'label':n} for k,n in zip(BACKGROUNDS,(("Автоматически", "Красный", "Оранжевый", "Жёлтый", "Зелёный", "Синий", "Фиолетовый", "Розовый", "Графит", "Бургунди", "Малиновый", "Лавандовый", "Бирюзовый", "Янтарный", "Голубой", "Индиго", "Мятный") if self.hass.config.language == 'ru' else ("Automatic", "Red", "Orange", "Yellow", "Green", "Blue", "Violet", "Pink", "Graphite", "Burgundy", "Raspberry", "Lavender", "Teal", "Amber", "Cyan", "Indigo", "Mint")))]),
             vol.Required('order', default=current.get('order',selected(self._values).index(entity)+1)): selector.NumberSelector(selector.NumberSelectorConfig(min=1,max=99,step=1,mode=selector.NumberSelectorMode.BOX)),
             vol.Optional('favorite', default=self._values.get('home_entity')==entity): bool,
-            vol.Required('icon', default=current.get('icon','auto')): dropdown([{'value':k,'label':n} for k,n in zip(ICONS,('Автоматически','Температура','Влажность','Лампочка','Люстра','Светодиодная лента','Выключатель','Розетка','Климат','Шторы','Датчик','Движение','Дверь','Батарея'))]),
+            vol.Required('icon', default=current.get('icon','auto')): dropdown([{'value':k,'label':n} for k,n in zip(ICONS,(('Автоматически','Температура','Влажность','Лампочка','Люстра','Светодиодная лента','Выключатель','Розетка','Климат','Шторы','Датчик','Движение','Дверь','Батарея') if self.hass.config.language == 'ru' else ('Automatic','Temperature','Humidity','Bulb','Chandelier','LED strip','Switch','Socket','Climate','Cover','Sensor','Motion','Door','Battery')))]),
             vol.Required('precision', default=current.get('precision',-1)): selector.NumberSelector(selector.NumberSelectorConfig(min=-1,max=3,step=1,mode=selector.NumberSelectorMode.BOX)),
+            vol.Required('history_hours', default=str(current.get('history_hours',12))): dropdown([{'value':str(h),'label':str(h) if h else ('Выключено' if self.hass.config.language == 'ru' else 'Off')} for h in PERIODS]),
             vol.Optional('another', default=False): bool,
         }), errors=errors, description_placeholders={'entity':entity})

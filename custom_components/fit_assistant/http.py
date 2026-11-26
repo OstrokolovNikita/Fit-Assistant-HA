@@ -8,6 +8,7 @@ from homeassistant.helpers import area_registry, device_registry, entity_registr
 from .const import DOMAIN, MAX_ENTITIES, READ_DOMAINS
 from .protocol import matches, action_allowed
 from .layout import decorate
+from .trend import get_trend, number
 
 
 def reply(data, status=200):
@@ -79,7 +80,24 @@ class DashboardView(BaseView):
             if self.hub['pool'].waiting(request.headers.get('X-Fit-Token','')):
                 return reply({'status': 'pending'})
             return reply({'status': 'denied'}, 403)
-        return reply({'status': 'ok', 'name': entry.title[:40], 'items': self.items(entry)})
+        items = self.items(entry)
+        requested = request.query.get("history", "")
+        item = next((i for i in items if i["id"] == requested), None)
+        trend = None
+        if item and requested.startswith("sensor.") and number(item["state"]) is not None:
+            hours = entry.options.get("cards", {}).get(requested, {}).get("history_hours", 12)
+            trend = await get_trend(self.hass, self.hub, requested, hours)
+            # Reauthorize after the asynchronous Recorder query.
+            entry = self.profile(request)
+            if entry is None:
+                return reply({"status": "denied"}, 403)
+            items = self.items(entry)
+            item = next((i for i in items if i["id"] == requested), None)
+            current_hours = entry.options.get("cards", {}).get(requested, {}).get("history_hours", 12)
+            if item and trend and hours == current_hours and number(item["state"]) is not None:
+                item["history"] = trend
+        return reply({"status": "ok", "name": entry.title[:40], "items": items,
+                      "language": entry.options.get("language", "en")})
 
 
 class ActionView(BaseView):
