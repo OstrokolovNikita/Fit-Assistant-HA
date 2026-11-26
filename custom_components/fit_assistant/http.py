@@ -4,6 +4,7 @@ import json
 from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import Context
+from homeassistant.helpers import area_registry, device_registry, entity_registry
 from .const import DOMAIN, MAX_ENTITIES, READ_DOMAINS
 from .protocol import matches, action_allowed
 from .layout import decorate
@@ -31,6 +32,9 @@ class BaseView(HomeAssistantView):
         controls = entry.options.get('controls', [])
         entities = list(dict.fromkeys(entry.options.get('entities', []) + controls))[:MAX_ENTITIES]
         result = []
+        er = entity_registry.async_get(self.hass)
+        dr = device_registry.async_get(self.hass)
+        ar = area_registry.async_get(self.hass)
         for entity in entities:
             if entity.partition('.')[0] not in READ_DOMAINS:
                 continue
@@ -38,7 +42,14 @@ class BaseView(HomeAssistantView):
             name = str(state.name if state else entity)[:60]
             value = str(state.state if state else 'unavailable')[:60]
             unit = str(state.attributes.get('unit_of_measurement') or '')[:15] if state else ''
+            reg = er.async_get(entity)
+            area_id = reg.area_id if reg else None
+            if not area_id and reg and reg.device_id:
+                device = dr.async_get(reg.device_id)
+                area_id = device.area_id if device else None
+            area = ar.async_get_area(area_id) if area_id else None
             result.append({'id': entity, 'name': name, 'state': value, 'unit': unit,
+                           '_area': area.name if area else '',
                            'control': action_allowed(entity, 'turn_on', controls) and value in ('on','off')})
         return decorate(result, entry.options)
 

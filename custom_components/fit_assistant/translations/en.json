@@ -36,10 +36,10 @@
       },
       "card": {
         "title": "Card layout",
-        "description": "Entity: {entity}. Empty label uses HA name. Lower order goes first.",
+        "description": "Entity: {entity}. Empty name uses HA name; empty room uses HA area. Favorites are independent.",
         "data": {
           "label": "Watch label",
-          "group": "Section",
+          "group": "Room (empty = HA area)",
           "theme": "Color",
           "order": "Order",
           "another": "Edit another card",

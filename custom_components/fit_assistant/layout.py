@@ -1,17 +1,22 @@
-"""Watch card presentation; never changes authorization."""
+"""Watch presentation only; permissions are enforced separately."""
 THEMES = ('auto', 'blue', 'teal', 'amber', 'violet', 'red')
-ICONS = ('auto', 'temp', 'humidity', 'light', 'power', 'climate', 'cover', 'sensor')
+ICONS = ('auto', 'temp', 'humidity', 'light', 'chandelier', 'strip', 'power', 'socket', 'climate', 'cover', 'sensor', 'motion', 'door', 'battery')
+
+def room_name(value):
+    value = str(value or '').strip()
+    return '' if value.casefold() in ('избранное', 'favorites') else value
 
 def decorate(items, options):
     cards = options.get('cards', {})
     result = []
     for index, original in enumerate(items):
         item = dict(original)
+        area = item.pop('_area', '')
         cfg = cards.get(item['id'], {})
         item['name'] = cfg.get('label') or item['name']
-        item['group'] = cfg.get('group') or 'Избранное'
+        item['group'] = room_name(cfg.get('group')) or room_name(area) or 'Без комнаты'
         item['theme'] = cfg.get('theme') if cfg.get('theme') in THEMES else 'auto'
-        item['favorite'] = bool(cfg.get('favorite', item['group'] == 'Избранное'))
+        item['favorite'] = cfg.get('favorite') is True
         item['icon'] = cfg.get('icon') if cfg.get('icon') in ICONS else 'auto'
         precision = cfg.get('precision', -1)
         if isinstance(precision, int) and 0 <= precision <= 3:

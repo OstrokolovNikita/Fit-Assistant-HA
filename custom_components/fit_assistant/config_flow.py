@@ -3,7 +3,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers import selector
 from .const import DOMAIN, MAX_ENTITIES, READ_DOMAINS, CONTROL_DOMAINS
-from .layout import THEMES, ICONS
+from .layout import THEMES, ICONS, room_name
 
 
 def fields(options):
@@ -117,7 +117,7 @@ class FitOptionsFlow(config_entries.OptionsFlow):
         errors = {}
         if user_input is not None:
             label = user_input.get('label', '').strip()
-            group = user_input.get('group', '').strip() or 'Избранное'
+            group = room_name(user_input.get('group', ''))
             theme = user_input.get('theme', 'auto')
             order = int(user_input.get('order', 1))
             icon = user_input.get('icon', 'auto')
@@ -135,11 +135,11 @@ class FitOptionsFlow(config_entries.OptionsFlow):
         themes = [{'value':k,'label':n} for k,n in zip(THEMES,('Автоматически','Синий','Бирюзовый','Янтарный','Фиолетовый','Красный'))]
         return self.async_show_form(step_id='card', data_schema=vol.Schema({
             vol.Optional('label', default=current.get('label','')): str,
-            vol.Optional('group', default=current.get('group','Избранное')): str,
+            vol.Optional('group', default=room_name(current.get('group'))): str,
             vol.Required('theme', default=current.get('theme','auto')): dropdown(themes),
             vol.Required('order', default=current.get('order',selected(self._values).index(entity)+1)): selector.NumberSelector(selector.NumberSelectorConfig(min=1,max=99,step=1,mode=selector.NumberSelectorMode.BOX)),
-            vol.Optional('favorite', default=current.get('favorite',current.get('group','Избранное')=='Избранное')): bool,
-            vol.Required('icon', default=current.get('icon','auto')): dropdown([{'value':k,'label':n} for k,n in zip(ICONS,('Автоматически','Температура','Влажность','Лампа','Питание','Климат','Шторы','Датчик'))]),
+            vol.Optional('favorite', default=current.get('favorite',False)): bool,
+            vol.Required('icon', default=current.get('icon','auto')): dropdown([{'value':k,'label':n} for k,n in zip(ICONS,('Автоматически','Температура','Влажность','Лампочка','Люстра','Светодиодная лента','Выключатель','Розетка','Климат','Шторы','Датчик','Движение','Дверь','Батарея'))]),
             vol.Required('precision', default=current.get('precision',-1)): selector.NumberSelector(selector.NumberSelectorConfig(min=-1,max=3,step=1,mode=selector.NumberSelectorMode.BOX)),
             vol.Optional('another', default=False): bool,
         }), errors=errors, description_placeholders={'entity':entity})
