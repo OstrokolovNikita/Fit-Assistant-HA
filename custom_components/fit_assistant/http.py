@@ -112,7 +112,9 @@ class DashboardView(BaseView):
                         item["history"] = trend
         return reply({"status": "ok", "name": entry.title[:40], "items": items,
                       "language": entry.options.get("language", "en"),
-                      "keep_seconds": entry.options.get("keep_seconds", 15)})
+                      "keep_seconds": entry.options.get("keep_seconds", 15),
+                      "addresses": {"internal_url": self.hass.config.internal_url or "",
+                                    "external_url": self.hass.config.external_url or ""}})
 
 
 class ActionView(BaseView):
