@@ -1,4 +1,5 @@
 """Admin creates a profile, then approves a short code displayed on the watch."""
+from urllib.parse import urlsplit
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.helpers import selector
@@ -6,6 +7,28 @@ from .const import DOMAIN, MAX_ENTITIES, READ_DOMAINS, CONTROL_DOMAINS
 from .layout import THEMES, ICONS, BACKGROUNDS, room_name, home_entity
 from .trend import PERIODS
 from .protocol import apply_pairing
+
+
+def route_url(raw, external=False):
+    """Only HTTP(S) origins supported by the watch, no credentials or URL paths."""
+    raw = raw.strip()
+    if not raw:
+        return ''
+    try:
+        u = urlsplit(raw)
+        host = u.hostname or ''
+        port = u.port
+        if (u.scheme not in (('https',) if external else ('http', 'https'))
+                or not host or len(raw) > 240 or u.username is not None
+                or u.password is not None or u.path not in ('', '/')
+                or u.query or u.fragment or ':' in host or '..' in host
+                or host[0] in '.-' or host[-1] in '.-'
+                or any(ch not in 'abcdefghijklmnopqrstuvwxyz0123456789.-' for ch in host)
+                or (port is not None and port < 1)):
+            return None
+        return u.scheme + '://' + host + (':' + str(port) if port is not None else (':80' if u.scheme == 'http' else ''))
+    except (ValueError, AttributeError):
+        return None
 
 
 def fields(options):
@@ -66,12 +89,16 @@ class FitOptionsFlow(config_entries.OptionsFlow):
             values = validate(user_input)
             code = user_input.get('pair_code', '').strip()
             revoke = user_input.get('revoke', False)
-            if values is None:
+            local = route_url(user_input.get('internal_url', old.get('internal_url', self.hass.config.internal_url or '')))
+            external = route_url(user_input.get('external_url', old.get('external_url', self.hass.config.external_url or '')), True)
+            if local is None or external is None:
+                errors['base'] = 'invalid_address'
+            elif values is None:
                 errors['base'] = 'invalid_profile'
             elif code and revoke:
                 errors['base'] = 'revoke_first'
             else:
-                values = {**old, **values}
+                values = {**old, **values, 'internal_url': local, 'external_url': external}
                 ids = selected(values)
                 values['cards'] = {k:{key: value for key, value in v.items() if key != 'favorite'} for k,v in old.get('cards', {}).items() if k in ids}
                 values['home_entity'] = user_input.get('home_entity', home_entity(old, ids))
@@ -103,6 +130,8 @@ class FitOptionsFlow(config_entries.OptionsFlow):
         schema[vol.Optional('keep_seconds', default=str(old.get('keep_seconds',15) if old.get('keep_seconds',15) in (5,10,15,30) else 15))] = dropdown([{'value':str(n),'label':str(n)} for n in (5,10,15,30)])
         schema[vol.Optional('language', default=old.get('language','en') if old.get('language','en') in ('en','ru') else 'en')] = dropdown([{'value':'en','label':'English'}, {'value':'ru','label':'Русский'}])
         schema[vol.Optional('edit_cards', default=False)] = bool
+        schema[vol.Optional('internal_url', default=old.get('internal_url', self.hass.config.internal_url or ''))] = str
+        schema[vol.Optional('external_url', default=old.get('external_url', self.hass.config.external_url or ''))] = str
         schema[vol.Optional('pair_code')] = str
         if old.get('token_hash'):
             schema[vol.Optional('revoke', default=False)] = bool
