@@ -80,6 +80,11 @@ class DashboardView(BaseView):
     name = 'api:fit_assistant:dashboard'
 
     async def get(self, request):
+        # Token-free identity check before trying an alternate configured origin.
+        probe = request.query.get('profile')
+        if probe is not None and not request.headers.get('X-Fit-Token'):
+            return reply({'status': 'match'} if any(e.entry_id == probe and e.options.get('token_hash') for e in self.entries()) else {'status': 'denied'},
+                         200 if any(e.entry_id == probe and e.options.get('token_hash') for e in self.entries()) else 403)
         entry = self.profile(request)
         if entry is None:
             if self.hub['pool'].waiting(request.headers.get('X-Fit-Token','')):
@@ -113,8 +118,9 @@ class DashboardView(BaseView):
         return reply({"status": "ok", "name": entry.title[:40], "items": items,
                       "language": entry.options.get("language", "en"),
                       "keep_seconds": entry.options.get("keep_seconds", 15),
-                      "addresses": {"internal_url": self.hass.config.internal_url or "",
-                                    "external_url": self.hass.config.external_url or ""}})
+                      "profile_id": entry.entry_id,
+                      "addresses": {"internal_url": entry.options.get("internal_url", self.hass.config.internal_url or ""),
+                                    "external_url": entry.options.get("external_url", self.hass.config.external_url or "")}})
 
 
 class ActionView(BaseView):
