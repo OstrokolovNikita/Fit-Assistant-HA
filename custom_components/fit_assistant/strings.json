@@ -19,7 +19,7 @@
     "step": {
       "init": {
         "title": "Watch settings",
-        "description": "Status: {status}. For pairing or re-pairing, tap Connect on the watch and enter the code in this profile. Approval replaces the previous token; devices and cards are retained.",
+        "description": "Status: {status}. For pairing or re-pairing, tap Connect on the watch and enter the code in this profile. Approval replaces the previous token; devices and cards are retained. Set addresses manually; an empty field disables that route. Use HTTP only on trusted networks.",
         "data": {
           "entities": "Read-only entities",
           "controls": "Allowed lights and switches",
@@ -28,7 +28,9 @@
           "edit_cards": "Customize cards",
           "language": "Watch language",
           "home_entity": "Home favorite",
-          "keep_seconds": "Screen hold, seconds"
+          "keep_seconds": "Screen hold, seconds",
+          "internal_url": "Local HA address (HTTP/HTTPS)",
+          "external_url": "External HA address (HTTPS)"
         }
       },
       "choose_card": {
@@ -57,7 +59,8 @@
       "invalid_profile": "Select at most 20 supported entities.",
       "invalid_code": "Invalid or expired code. Get a new code on the watch.",
       "revoke_first": "Enter a code or revoke access, not both.",
-      "invalid_card": "Label up to 60 characters, section up to 24."
+      "invalid_card": "Label up to 60 characters, section up to 24.",
+      "invalid_address": "Use http://192.168.1.10:8123 or https://ha.example.org, without a path or credentials. External address must be HTTPS."
     },
     "abort": {
       "profile_changed": "Profile changed. Reopen settings."
