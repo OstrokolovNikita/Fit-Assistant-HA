@@ -95,13 +95,13 @@ class FitOptionsFlow(config_entries.OptionsFlow):
                     return self.async_create_entry(title='', data=values)
         schema = fields(old)
         ids = selected(old)
-        choices = [{'value':'', 'label':'None' if self.hass.config.language != 'ru' else 'Нет'}]
+        choices = [{'value':'__none__', 'label':'None' if self.hass.config.language != 'ru' else 'Нет'}]
         for entity in ids:
             state = self.hass.states.get(entity)
             choices.append({'value':entity,'label':state.name if state else entity})
-        schema[vol.Required('home_entity', default=home_entity(old, ids) or '')] = dropdown(choices)
-        schema[vol.Required('keep_seconds', default=str(old.get('keep_seconds',15)))] = dropdown([{'value':str(n),'label':str(n)} for n in (5,10,15,30)])
-        schema[vol.Required('language', default=old.get('language','en'))] = dropdown([{'value':'en','label':'English'}, {'value':'ru','label':'Русский'}])
+        schema[vol.Optional('home_entity', default=home_entity(old, ids) or '__none__')] = dropdown(choices)
+        schema[vol.Optional('keep_seconds', default=str(old.get('keep_seconds',15) if old.get('keep_seconds',15) in (5,10,15,30) else 15))] = dropdown([{'value':str(n),'label':str(n)} for n in (5,10,15,30)])
+        schema[vol.Optional('language', default=old.get('language','en') if old.get('language','en') in ('en','ru') else 'en')] = dropdown([{'value':'en','label':'English'}, {'value':'ru','label':'Русский'}])
         schema[vol.Optional('edit_cards', default=False)] = bool
         schema[vol.Optional('pair_code')] = str
         if old.get('token_hash'):
